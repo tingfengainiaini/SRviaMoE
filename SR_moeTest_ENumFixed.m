@@ -1,4 +1,4 @@
-function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, ERelation)
+function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, EUseTol, EUseW_0, GUseMetric, dataNum)
     %test code 
     %the pic used just as Yang
     %%%
@@ -22,8 +22,9 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, ERelation)
     folder_dataset = fullfile(folder_project,'Dataset');
     folder_cluster_root =  fullfile(folder_yang13,'Cluster');
 
-    folder_moe_result = fullfile(folder_yang13, sprintf('moe_result_ENFixed_k%d_e%d_beta%d_WithReduce_full_regular',kmeans_Num,ExpertsNum, Gbeta));
-    folder_mappingdata = fullfile(folder_yang13, sprintf('MappingData_%d_full_5000',kmeans_Num));
+    folder_moe_result = fullfile(folder_yang13, ...
+        sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num,ExpertsNum, Gbeta,lamda,EUseTol,EUseW_0,GUseMetric, dataNum));
+    folder_mappingdata = fullfile(folder_yang13, sprintf('MappingData_%d_full_%d',kmeans_Num, dataNum));
 
     %load filelist
     folder_filenamelist = fullfile(folder_dataset,'FileList');
@@ -79,7 +80,7 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, ERelation)
                 fprintf('create %s\n', folder_write);
             end
             %write the evaluation results to a txt file.
-            fn_write_result = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_WithReduce_%s_full_regular.txt',name_dataset,str_method,str_appendix, kmeans_Num, ExpertsNum, Gbeta, ERelation);
+            fn_write_result = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_%s_regular_usetol%d_usew%d_usem%d.txt',name_dataset,str_method,str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric);
 
             %fn_full_result = fullfile(folder_write,fn_write_result); 
     %         fid = fopen(fn_full_result,'a');
@@ -90,7 +91,7 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, ERelation)
                 fn_name = list_filename{idx_file};
                 fn_short = fn_name(1:end-4);
                 %fn_write = sprintf('%s_%s%s.png',fn_short,str_method,str_appendix);
-                fn_write = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_WithReduce_full_%s_regular.png',fn_short,str_method, str_appendix, kmeans_Num, ExpertsNum, Gbeta, ERelation);
+                fn_write = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_%s_regular_usetol%d_usew%d_usem%d.png',fn_short,str_method, str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric);
                 fn_full = fullfile(folder_write,fn_write);
 
 

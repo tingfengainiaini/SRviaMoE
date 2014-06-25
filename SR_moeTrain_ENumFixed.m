@@ -1,14 +1,14 @@
-function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate, ERelation)
+function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate, lamda, ERelation, EUseTol, EUseW_0, GUseMetric, dataNum)
     folder_wang = pwd;
     if nargin < 1
         kmeans_Num = 128;
         beta = 3;
         maxIt = 100;
-        LearningRate = 0.01;
+        LearningRate = 0.001;
     end
     
-    folder_mappingdata_wang = fullfile(folder_wang,sprintf('MappingData_%d_full_5000',kmeans_Num));
-    folder_moe_result_wang = fullfile(folder_wang,sprintf('moe_result_ENFixed_k%d_e%d_beta%d_WithReduce_full_regular',kmeans_Num, ExpertNum, Gbeta));
+    folder_mappingdata_wang = fullfile(folder_wang,sprintf('MappingData_%d_full_%d',kmeans_Num, dataNum));
+    folder_moe_result_wang = fullfile(folder_wang,sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num, ExpertNum, Gbeta,lamda,EUseTol,EUseW_0,GUseMetric,dataNum));
     
     idx_label_start = 1;
     idx_label_end = kmeans_Num;%Parameter
@@ -36,6 +36,7 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
                     fprintf('%d moe is bad, loglike - inf--------total %d', idx_label, badMoENum);
                     badMoENum =badMoENum+1;
                     badmoeIndex = [badmoeIndex idx_label]
+                    continue;
                 else
                     if isfield(moeTest.Experts, 'Weights')
                         fprintf('skip %s\n',fn_full);
@@ -46,6 +47,7 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
                         badmoeIndex = [badmoeIndex idx_label]
                     end
                 end
+                clear loadDataTest;
                 %continue;
              end
             fn_mapData = sprintf('MappingData_%d.mat',idx_label);
@@ -57,9 +59,8 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
             loaddata = load(fn_full_mapData);
             Input = loaddata.Input;
             Target = loaddata.Target;
-            if idx_label == 2
-                fprintf('training the 2 label\n');
-            end
+
+            
             %if the input size > 10000, we just use the half;
             dim1 = size(Input,1);
             if (dim1 >= cut_value)
@@ -68,38 +69,32 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
             end
             
             NumOfExperts = ExpertNum;
-            if (size(Input,1) < NumOfExperts*5)
-                Input = [Input-0.002; Input; Input+0.01; Input-0.005; Input+0.006;] ;
-                Target = [Target-0.002; Target; Target+0.01; Target-0.005; Target+0.006;] ;
-                disp(['size(Input,1) < NumOfExperts*5 !!!!']);
-            end
-            %clear loaddata;
-            %创建交叉验证的Test数据集,使用输入的一半
-    %         dim2 = size(Input,1); 
-    %         TestInput = Input(1:2:dim2,:);
-    %         TestTarget = Target(1:2:dim2,:); 
+            clear loaddata;
             
-            TestInput = Input;
-            TestTarget = Target;
+            %Initialize the w0 by the regressor resulted from the data
+            %If set the Input\Target, just use the information that the data have. 
+            %If set the w gotten from , just use the information that the data have.
+            %w_0 = Input\Target;
+            load_w0 = load('w0.mat','www');
+            w_0 = load_w0.www;
             
-            %Initialize the w0 by the regressor resulted from the 
-            w_0 = Input\Target;
+            clear load_w0;
             %Initialize the lamda by the computation lamda/logn
-            lamda = 1/log(size(Input,1));
             
             fprintf('ExpertNum: %d, Input size %d, max: %f, min: %f\n', NumOfExperts, dim1, max(max(Input)), min(min(Input)));
             %% Create moe
-           moe = moeSimpleCreate('NumExperts', NumOfExperts , 'MaxIt', maxIt, 'EType', 'linear', 'ENbf', 0.1,'ELamda', lamda, 'EWInit', w_0, 'EKernel', 'linear', 'EKParam', 0.5, ...
-        'GType', 'metric',  'GERelation', ERelation,  'GNbf', 0.1,'GBeta',Gbeta, 'GLearningRate', LearningRate, 'GKernel', 'linear', 'GKParam', 0.5);
+           moe = moeSimpleCreate('NumExperts', NumOfExperts , 'MaxIt', maxIt, 'EType', 'linear', 'Elamda',lamda, 'ENbf', 0.1,'EUseTol',EUseTol,'EUseW_0',EUseW_0, 'EWInit', w_0, 'EKernel', 'linear', 'EKParam', 0.5, ...
+        'GType', 'metric',  'GERelation', ERelation,  'GNbf', 0.1,'GBeta',Gbeta,'GUseMetric',GUseMetric, 'GLearningRate', LearningRate, 'GKernel', 'linear', 'GKParam', 0.5);
             % Input = repmat(Input,[1 2]);
             % Target = repmat(Target,[1 2]);
         %     Input = A;
         %     Target = [Target Target];
            %% 初始化BME，使用Keans
-            moe = moeSimpleInit(moe, Input, Target, Target, TestInput) ; 
+            moe = moeSimpleInit(moe, Input, Target) ; 
             %% BME的训练
-            moe = moeSimpleTrain(moe, Target, TestTarget,idx_label) ;  
+            moe = moeSimpleTrain(moe, Target, idx_label) ;  
             save(fn_full, 'moe');
+            clear moe;
         end
         fprintf('The bad moe num is %d\n',badMoENum);
         disp(badmoeIndex);

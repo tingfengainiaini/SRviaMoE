@@ -19,9 +19,9 @@ for i = 1:length(varargin)/2
     switch Name
         case {'NumExperts', 'MaxIt'}
             moeModel = setfield(moeModel, Name, Value);
-        case {'EType', 'ENbf', 'EWInit','ELamda' 'EKernel', 'EKParam'}
+        case {'EType', 'ENbf','EUseTol','EUseW_0', 'Elamda', 'EWInit','EKernel', 'EKParam'}
             moeModel.Experts = setfield(moeModel.Experts, Name(2:end), Value);
-        case {'GType', 'GERelation', 'GBeta', 'GLearningRate', 'GNbf', 'GKernel', 'GKParam'}
+        case {'GType', 'GERelation', 'GBeta', 'GUseMetric','GLearningRate', 'GNbf', 'GKernel', 'GKParam'}
             moeModel.Gatings = setfield(moeModel.Gatings, Name(2:end), Value);
         otherwise
             disp( ['unknown name: ' Name]);

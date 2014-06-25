@@ -132,8 +132,15 @@
                 
                 GatingsOutputs = zeros(size(GInput,1),size(moe.Gatings.Weights,2));
                 if (strcmpi(moe.Gatings.Type,'metric'))
-                    for i = 1:moe.NumExperts   
-                         GatingsOutputs(:,i) = exp(-sum((GInput-repmat(moe.Gatings.Weights(:,i),1,size(GInput,1))').^2,2));
+                    for i = 1:moe.NumExperts 
+                        if (moe.Gatings.UseMetric == 1)
+                             GatingsOutputs(:,i) = exp(-moe.Gatings.Beta*sum(...
+                                 (GInput-repmat(moe.Gatings.Weights(:,i),1,size(GInput,1))')*moe.Gatings.Metric...
+                                 *(GInput-repmat(moe.Gatings.Weights(:,i),1,size(GInput,1))')'  ,2));
+                        else
+                            GatingsOutputs(:,i) = exp(-moe.Gatings.Beta*sum((GInput-repmat(moe.Gatings.Weights(:,i),1,size(GInput,1))').^2,2));
+                        end
+                         %GatingsOutputs(:,i) = exp(-moe.Gatings.Beta*sum((GInput-repmat(moe.Gatings.Weights(:,i),1,size(GInput,1))').^2,2));
                     end
                 else
                     GatingsOutputs = exp(GInput*moe.Gatings.Weights);

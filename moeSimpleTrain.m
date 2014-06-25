@@ -1,14 +1,12 @@
-function moeModel = moeSimpleTrain(moeModel, Target, TestTarget, idx_label)
+function moeModel = moeSimpleTrain(moeModel, Target, idx_label)
 
 %% Train moeModel
- MinPosterior = 0.01;
+ MinPosterior = 0.001;
  MinErrorCompete = inf; 
  MinErrorCoorper = inf;
  MinErrorLoc = 1;
- ifbreak = 0;
-if nargin < 4
-    idx_label = 0;
-end
+ifbreak = 0;
+
 count = 1;
 while (count <= moeModel.MaxIt)
     moeModelTemp = moeModel;%record the moe with min error
@@ -18,21 +16,39 @@ while (count <= moeModel.MaxIt)
     for i = 1:moeModel.NumExperts    
         moeModel = moeSimpleExpertsTrain(Target, moeModel, i) ;
         moeModel = moeSimpleGatingsTrain(moeModel, i) ;
-        gatingsOutputs = zeros(size(moeModel.Gatings.Input,1),size(moeModel.Gatings.Weights,2));
+
+        %gatingsOutputs = zeros(size(moeModel.Gatings.Input,1),size(moeModel.Gatings.Weights,2));
         sum_squre_distance = zeros(size(moeModel.Gatings.Input,1),size(moeModel.Gatings.Weights,2));
         %To avoid the 0/0 problem, I use a method here.
-        %In the process computing the gatingOutput, add a min exp value
+        %In the process computing the gatingOutput, sub a min exp value
         if (strcmp(moeModel.Gatings.Type,'metric'))
-            for i = 1:moeModel.NumExperts   
-                sum_squre_distance(:,i) = sum((moeModel.Gatings.Input-repmat(moeModel.Gatings.Weights(:,i),1,size(moeModel.Gatings.Input,1))').^2,2);
+            for i = 1:moeModel.NumExperts
+                if (moeModel.Gatings.UseMetric == 1)%使用metric矩阵
+                    sum_squre_distance(:,i) = sum((moeModel.Gatings.Input-repmat(moeModel.Gatings.Weights(:,i),1,size(moeModel.Gatings.Input,1))')*...
+                        moeModel.Gatings.Metric*...
+                        (moeModel.Gatings.Input-repmat(moeModel.Gatings.Weights(:,i),1,size(moeModel.Gatings.Input,1))')', 2);
+                else%不使用metric矩阵
+                    sum_squre_distance(:,i) = sum((moeModel.Gatings.Input-repmat(moeModel.Gatings.Weights(:,i),1,size(moeModel.Gatings.Input,1))').^2,2);
+                end
             end
+            %这里使用小技巧，gateoutput的分子分母同时除以一个最小值，这样不影响最终结果，但是防止了0/0的情况
             min_sum = min(sum_squre_distance,[],2)/2;
             gatingsOutputs = exp(-moeModel.Gatings.Beta*(sum_squre_distance-repmat(min_sum,1,moeModel.NumExperts)));
-            %gatingsOutputs = exp(-moeModel.Gatings.Beta*(sum_squre_distance));
             moeModel.Gatings.Outputs  =  gatingsOutputs;
+            %这里需不需要每一步都scale一下啊？
             %moeModel.Gatings.Outputs = moeModelGatingsOutputsNorm(moeModel);
         else
              moeModel.Gatings.Outputs = exp(moeModel.Gatings.Input*moeModel.Gatings.Weights);
+        end
+    end
+    if (sum(sum(isnan(moeModel.Gatings.Outputs)))>0)
+        %moeModel.Gatings.Posteriors  = moeModel.Gatings.Posteriors + MinPosterior;
+        moeModel.Gatings.Outputs(isnan(moeModel.Gatings.Outputs)) = eps;
+        if (sum(sum(isnan(moeModel.Gatings.Outputs)))>0)
+            fprintf('%d iterate: %d break\n', idx_label,count);
+            fprintf('%d iterate: %d isnan(moeModel.Gatings.Outputs), result in moeModel reduce\n', idx_label,count);
+            moeModel = moeModelTemp;
+            ifbreak = 1;
         end
     end
     
@@ -43,7 +59,8 @@ while (count <= moeModel.MaxIt)
     %if there exists nan in Gatings'posteriors, then add an eps to it.
     %If this problem persists, make the moe reduece to moeModelTemp.
     if (sum(sum(isnan(moeModel.Gatings.Posteriors)))>0)
-        moeModel.Gatings.Posteriors  = moeModel.Gatings.Posteriors + MinPosterior;
+        %moeModel.Gatings.Posteriors  = moeModel.Gatings.Posteriors + MinPosterior;
+        moeModel.Gatings.Posteriors(isnan(moeModel.Gatings.Posteriors)) = eps;
         if (sum(sum(isnan(moeModel.Gatings.Posteriors)))>0)
             fprintf('%d iterate: %d break\n', idx_label,count);
             fprintf('%d iterate: %d isnan(moeModel.Gatings.Posteriors), result in moeModel reduce\n', idx_label,count);
@@ -53,6 +70,17 @@ while (count <= moeModel.MaxIt)
     end
     
     moeModel.LogLike(count,1) = moeLogLike(Target, moeModel);
+    
+    if (sum(sum(isnan(moeModel.LogLike(count))))>0) 
+            fprintf('%d iterate: %d isnan(moeModel.LogLike), result in moeModel reduce\n', idx_label,count);
+            ifbreak = 1;
+    end
+    
+     if (sum(sum(isinf(moeModel.LogLike(count))))>0) 
+            fprintf('%d iterate: %d isinf(moeModel.LogLike), result in moeModel reduce\n', idx_label,count);
+            ifbreak = 1;
+     end
+    
     if count == 1
         LogLikeChange = 10*moeModel.MinLogLikeChange*moeModel.LogLike(count);
     else

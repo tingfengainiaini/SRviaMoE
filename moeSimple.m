@@ -2,7 +2,12 @@ clc;
 clear;
 close all;
 load SData;
-[Input, Target] = MoE_SyntheticData();
+
+folder_project = pwd;
+folder_lib = fullfile(folder_project,'Lib');
+addpath(genpath(folder_lib)); 
+
+ [Input, Target] = MoE_SyntheticData();
 % Input = 0.01*pi:0.01*pi:5*pi;
 % 
 % Input = Input';
@@ -14,13 +19,12 @@ load SData;
 TestInput = Input;
 TestTarget = Target;
 
-folder_project = pwd;
-folder_lib = fullfile(folder_project,'Lib');
-addpath(genpath(folder_lib)); 
 
-numOfExperts = 2;
-moeModel = moeSimpleCreate('NumExperts', numOfExperts , 'MaxIt', 50, 'EType', 'linear', 'ENbf', 0.1, 'EKernel', 'linear', 'EKParam', 0.5, ...
-    'GType', 'metric',  'GERelation', 'Compete', 'GBeta',7, 'GNbf', 0.1,  'GLearningRate',0.001, 'GKernel', 'linear', 'GKParam', 0.5);
+w_0 = Input\Target;
+NumOfExperts = 2;
+moeModel = moeSimpleCreate('NumExperts', NumOfExperts , 'MaxIt', 25, ...
+    'EType', 'linear', 'ENbf', 0.1,'EUseTol',0,'EUseW_0',0,'ELamda', 1, 'EWInit', w_0, 'EKernel', 'linear', 'EKParam', 0.5, ...
+        'GType', 'metric',  'GERelation', 'Compete',  'GNbf', 0.1,'GBeta',0.5,'GUseMetric',0, 'GLearningRate', 0.01, 'GKernel', 'linear', 'GKParam', 0.5);
 moeModel = moeSimpleInit(moeModel, Input, Target, Target, Input);
 tic;
 %% Now run the EM Algorithm 
@@ -96,8 +100,14 @@ end
 GateInput2 = K;
 gatingsOutputs = zeros(size(GateInput2,1),size(moeModel.Gatings.Weights,2));
 if (strcmpi(moeModel.Gatings.Type,'metric'))
-    for i = 1:moeModel.NumExperts   
-         gatingsOutputs(:,i) = exp(-moeModel.Gatings.Beta*sum((GateInput2-repmat(moeModel.Gatings.Weights(:,i),1,NumPts)').^2,2));
+    for i = 1:moeModel.NumExperts
+        if (moeModel.Gatings.UseMetric == 1)%若是使用了metric
+            gatingsOutputs(:,i) = exp(-moeModel.Gatings.Beta*sum(...
+                (GateInput2-repmat(moeModel.Gatings.Weights(:,i),1,NumPts)')* moeModel.Gatings.Metric*...
+            (GateInput2-repmat(moeModel.Gatings.Weights(:,i),1,NumPts)')' ,2));
+         else%没有使用metric
+            gatingsOutputs(:,i) = exp(-moeModel.Gatings.Beta*sum((GateInput2-repmat(moeModel.Gatings.Weights(:,i),1,NumPts)').^2,2));
+        end
     end
     moeModel.Gatings.Outputs  =  gatingsOutputs;
 else
