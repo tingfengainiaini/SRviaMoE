@@ -40,7 +40,7 @@
         if sum(smooth_grad(:)) == 200
             arr_smoothpatch(idx) = true;
             %完全平滑，那么不进行处理，直接用插值的结果进行填充，减少计算量
-            fprintf('%d --- %d,is smooth\n',idx,h_lr*w_lr);
+            %fprintf('%d --- %d,is smooth\n',idx,h_lr*w_lr);
         else
             patch_lr = img_y_ext(r:r1,c:c1);
             vector_lr = patch_lr(patchtovectorindexset);
@@ -50,20 +50,12 @@
             diff = repmat(feature,[1 num_cluster]) - clustercenter;     %it takes time here, try to use ANN to reduce the computational load
             l2normsquare = sum((diff.^2));
             [~,clusteridx] = min(l2normsquare);
-            fprintf('running the %d --- %d --- %d\n',idx,h_lr*w_lr, clusteridx);
-%             if ~exist(fullfile(folder_bme_result,sprintf('BmeReslut_%d.mat',clusteridx)),'file')
-%                 arr_smoothpatch(idx) = true;
-%                 continue;
-%             else
-%                 d = dir(strcat(folder_bme_result,'\',sprintf('BmeReslut_%d.mat',clusteridx)));
-%                 while d.bytes/1024 < 9200
-%                     fprintf('----the %d is bad\n',clusteridx);
-%                     clusteridx = clusteridx +1;
-%                     d = dir(strcat(folder_bme_result,'\',sprintf('BmeReslut_%d.mat',clusteridx)));
-%                 end
-%             end
+			if (mod(idx,1000)==0)
+                fprintf('running the %d --- %d --- %d\n',idx,h_lr*w_lr, clusteridx);
+            end
 
             arr_clusteridx(idx) = clusteridx;
+            %-------------------------------------------------------------------------
             Input = [feature;1]';
             
             %%Get the hr image use the moe
@@ -166,9 +158,12 @@
                 %feature_hr = ExpertsMeans(:,:,index(1,1));
                 if strcmpi(ERelation,'Compete')
                     feature_hr = ExpertsMeans(:,:,index(1,1));
+                    %feature_hr = reshape(ExpertsMeans(:,:,:),size(ExpertsMeans,2),size(ExpertsMeans,3))*GatingsOutputsNorm';
                 elseif strcmpi(ERelation,'Coorperate')
-                      feature_hr = reshape(ExpertsMeans(:,:,:),size(ExpertsMeans,2),size(ExpertsMeans,3))*GatingsOutputsNorm';
+                    %feature_hr = ExpertsMeans(:,:,index(1,1));  
+                    feature_hr = reshape(ExpertsMeans(:,:,:),size(ExpertsMeans,2),size(ExpertsMeans,3))*GatingsOutputsNorm';
                 end
+                %feature_hr = EInput * moe.Experts.WInit;
                 intensity_hr_this = feature_hr' + patch_lr_mean;
                 intensity_hr(:,idx) = intensity_hr_this;
             end

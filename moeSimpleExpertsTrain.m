@@ -1,11 +1,12 @@
 function moeModel = moeSimpleExpertsTrain(Target, moeModel, i)
 GatingPosterior = moeModel.Gatings.Posteriors(:,i);
-MinPosterior = 0.01;
+MinPosterior = 0.005;
 
 switch lower(moeModel.Experts.Type)
     case 'linear'
-        %Reduce the computational load by reducing the GatingPosterior < MinPosterior
-        Index = find(GatingPosterior > MinPosterior);
+        %Reduce the computational load by reducing the GatingPosterior <
+        %MinPosterior*0.5
+        Index = find(GatingPosterior >= MinPosterior/10);
         moeModel.Experts.lamdaSpecial(i) =  moeModel.Experts.lamda/log(size(Index,1));
         lamda = moeModel.Experts.lamdaSpecial(i);
         %Index = 1:size(GatingPosterior,1);
@@ -24,11 +25,17 @@ switch lower(moeModel.Experts.Type)
             %ExpertWeight = hessianHidden\(EInput'*WeightTarget +  0*moeModel.Experts.WInit);
 
             %正则化项加着w0，这里EInput'*WeightTarget没有乘以方差矩阵
-            ExpertWeight = hessianHidden\(EInput'*WeightTarget + lamda*moeModel.Experts.UseW_0*moeModel.Experts.WInit);
+            if det(hessianHidden) < 1e-100
+                ExpertWeight = EInput\WeightTarget;
+            else
+                ExpertWeight = hessianHidden\(EInput'*WeightTarget + lamda*moeModel.Experts.UseW_0*moeModel.Experts.WInit);
+            end
+            
+            if sum(sum(sum(isnan(ExpertWeight)))) > 0
+                ExpertWeight = moeModel.Experts.WInit;
+            end
+            
             if size(Target,2) == 1
-    %             InitBeta = 1./BME.Experts.Variances(i);
-    %             hessianHidden = EInput'*EInput*InitBeta + lamda*eye(size(EInput,2));
-    %             ExpertWeight = hessianHidden\(EInput'*WeightTarget*InitBeta + lamda*moeModel.Experts.WInit);
                 moeModel.Experts.Weights(:,i) = ExpertWeight;
             else
                 moeModel.Experts.Weights(:,:,i) = ExpertWeight;

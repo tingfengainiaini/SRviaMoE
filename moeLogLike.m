@@ -1,4 +1,4 @@
-function LogLike = moeLogLike(Target, moeModel)
+function LogLike = moeLogLike(Target, moeModel, count)
 %% Compute the loglikelihood
 
 ExpertsMeans = moeModel.Experts.Means;
@@ -7,7 +7,7 @@ GatingsOutputs = moeModelGatingsOutputsNorm(moeModel);
 
 sumprob = 0.0;
 if size(Target,2) == 1
-    for i = 1:moeModel.NumExperts
+    for i = 1:moeModel.NumExpertsg
         sumprob = sumprob + GatingsOutputs(:,i).*onedimgauss(ExpertsMeans(:,i) - Target, ExpertsVariances(i));
     end
 else

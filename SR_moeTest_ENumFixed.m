@@ -23,7 +23,7 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, E
     folder_cluster_root =  fullfile(folder_yang13,'Cluster');
 
     folder_moe_result = fullfile(folder_yang13, ...
-        sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num,ExpertsNum, Gbeta,lamda,EUseTol,EUseW_0,GUseMetric, dataNum));
+        sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_%s_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num,ExpertsNum, Gbeta,lamda,ERelation, EUseTol,EUseW_0,GUseMetric, dataNum));
     folder_mappingdata = fullfile(folder_yang13, sprintf('MappingData_%d_full_%d',kmeans_Num, dataNum));
 
     %load filelist
@@ -54,6 +54,8 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, E
             subfolder_groundTruth = 'Benchmark_GroundTruth';
             %Here, the file_input truth file is wrong infered.
             file_input = {'barbara_gnd.bmp'; 'Child_gnd.bmp';'Lena_gnd.bmp'};
+            %file_input = {'camera1.png';'camera2.png';'camera3.png';'camera4.png';'camera5.png';'film1.jpg';'film2.jpg';...
+    %'film3.jpg';'film4.jpg';'film5.jpg'};
             name_dataset = 'Benchmark';
         end
         list_filename = U5_ReadFileNameList(fullfile(folder_filenamelist,fn_filenamelist));
@@ -80,7 +82,8 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, E
                 fprintf('create %s\n', folder_write);
             end
             %write the evaluation results to a txt file.
-            fn_write_result = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_%s_regular_usetol%d_usew%d_usem%d.txt',name_dataset,str_method,str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric);
+            fn_write_result = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_%s_regular_usetol%d_usew%d_usem%d_dataNum%d.txt',...
+                name_dataset,str_method,str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric,dataNum);
 
             %fn_full_result = fullfile(folder_write,fn_write_result); 
     %         fid = fopen(fn_full_result,'a');
@@ -91,8 +94,13 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, E
                 fn_name = list_filename{idx_file};
                 fn_short = fn_name(1:end-4);
                 %fn_write = sprintf('%s_%s%s.png',fn_short,str_method,str_appendix);
-                fn_write = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_%s_regular_usetol%d_usew%d_usem%d.png',fn_short,str_method, str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric);
+                fn_write = sprintf('%s_%s_%s_ENFixed_k%d_e%d_beta%d_lamda%g_%s_regular_usetol%d_usew%d_usem%d_dataNum%d.png',...
+                    fn_short,str_method, str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric,dataNum);
                 fn_full = fullfile(folder_write,fn_write);
+                
+                fn_write2 = sprintf('%s_%s_%s_resized_k%d_e%d_beta%d_lamda%g_%s_regular_usetol%d_usew%d_usem%d_dataNum%d.png',...
+                    fn_short,str_method, str_appendix, kmeans_Num, ExpertsNum, Gbeta,lamda, ERelation,EUseTol,EUseW_0,GUseMetric,dataNum);
+                fn_full2 = fullfile(folder_write,fn_write2);
 
 
                 if ~strcmpi(fn_short,'IC')
@@ -123,10 +131,28 @@ function SR_moeTest_ENumFixed(kmeans_Num, Gbeta, ExpertsNum, lamda, ERelation, E
                         img_yiq_hr(:,:,2:3) = imresize(img_iq,sf);
                         img_rgb_hr = YIQ2RGB(img_yiq_hr);
                         imwrite(img_rgb_hr,fn_full);
+                        
+                        n1 = size(img_rgb_hr,1);
+                        n2 = size(img_rgb_hr,2);
+                        if (n1/n2 > 2160/3840)
+                            im2 = imresize(img_rgb_hr, [2160 n2*2160/n1]);
+                        else
+                            im2 = imresize(img_rgb_hr, [n1*3840/n2 3840]);
+                        end
+                        imwrite(im2,fn_full2)
                     else
                         img_y = img_rgb;
                         SR_moe_GenerateHRImage
                         imwrite(img_hr,fn_full);
+                        
+                        n1 = size(img_hr,1);
+                        n2 = size(img_hr,2);
+                        if (n1/n2 > 2160/3840)
+                            im2 = imresize(img_hr, [2160 n2*2160/n1]);
+                        else
+                            im2 = imresize(img_hr, [n1*3840/n2 3840]);
+                        end
+                        imwrite(im2,fn_full2)
                     end % if size(img_rgb,3) == 3
                 end %if exist(fn_full,'file')
 

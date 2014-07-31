@@ -8,15 +8,16 @@ N = size(Input,1);
 
 %metric M
 if (moeModel.Gatings.UseMetric == 1)
-    %metric = inv(cov([Input Target/5]));%Initialized to be the convariance matrix.
-    [IDInput, Centers] = kMeansCluster(Input, Target, moeModel.NumExperts, moeModel.Gatings.UseMetric, 0) ;
+    metric = inv(cov([Input Target/5]));%Initialized to be the convariance matrix.
+    [IDInput, Centers] = kMeansCluster(Input, Target/5, moeModel.NumExperts, moeModel.Gatings.UseMetric, metric) ;
+    clear metric;
 else
-    [IDInput, Centers] = kMeansCluster(Input, Target, moeModel.NumExperts, moeModel.Gatings.UseMetric, 0) ;
+    [IDInput, Centers] = kMeansCluster(Input, Target/5, moeModel.NumExperts, moeModel.Gatings.UseMetric, 0) ;
 end
 
-clear metric;
 
-Centers = [Centers(:,1:size(Input,2)),Centers(:,(size(Input,2)+1):(size(Input,2)+size(Target,2)))];
+
+%sCenters = [Centers(:,1:size(Input,2)),Centers(:,(size(Input,2)+1):(size(Input,2)+size(Target,2)))];
 InputCenters = Centers(:,1:size(Input,2));
 DataPointColors = {'r.','g.','b.','k.','m.','c.','y.'} ; 
 LineColors = {'r-','g-','b-','k-','m-','c-','y-'} ; 
@@ -65,14 +66,14 @@ switch lower(moeModel.Experts.Type)
             end
             hold off;
         else
-            moeModel.Experts.Weights = zeros(ED,size(Target,2),moeModel.NumExperts);  
+            moeModel.Experts.Weights = moeModel.Experts.WInit;  
             for i = 1:moeModel.NumExperts
                     Indices = find(IDInput == i) ;
                     moeModel.Experts.lamdaSpecial(i) = moeModel.Experts.lamda/log(size(Indices,1));
                     %moeModel.Experts.Weights(:,:,i) = LinearRegressor(Input(Indices,:),Target(Indices,:));
                     %这里不知道要不要加上。
                     %为了加速，这里不再计算
-                    moeModel.Experts.Weights(:,:,i) = Input(Indices,:)\Target(Indices,:);
+                    %moeModel.Experts.Weights(:,:,i) = Input(Indices,:)\Target(Indices,:);
             end
             if (moeModel.Experts.UseTol == 1)
                 for j = 1:size(Target,2)
@@ -115,11 +116,17 @@ switch lower(moeModel.Gatings.Type)
         moeModel.Gatings.Alpha = 1e-2;     
         moeModel.Gatings.Weights = zeros(GD,moeModel.NumExperts);
         
-        MinPosterior = 0.01;
+        %此处为了初始化，但是不知道设置多少合适
+        MinPosterior = 0.005;
+        
         moeModel.Gatings.Posteriors = MinPosterior*ones(N,moeModel.NumExperts) ;
         for i = 1:moeModel.NumExperts
-            Indices = find(IDInput == i) ;
-            moeModel.Gatings.Posteriors(Indices,i) = 1 - (moeModel.NumExperts-1)*MinPosterior;
+            Indices = IDInput == i ;
+            if moeModel.NumExperts > 100
+                moeModel.Gatings.Posteriors(Indices,i) = 1 - (moeModel.NumExperts-1)*MinPosterior;
+            else
+                moeModel.Gatings.Posteriors(Indices,i) = 1 - (moeModel.NumExperts-1)*MinPosterior;
+            end
         end
         
         if strcmpi(moeModel.Gatings.Kernel, 'linear')
@@ -129,6 +136,7 @@ switch lower(moeModel.Gatings.Type)
             if (moeModel.Gatings.UseMetric == 1)
                 moeModel.Gatings.Metric = cov(Input);%Initialized to be the convariance matrix.
             end
+            %这里gatingout也不用init吧。暂时删了
             for i = 1:moeModel.NumExperts
                 %Judge if use the metric
                 if (moeModel.Gatings.UseMetric == 1)

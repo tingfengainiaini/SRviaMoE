@@ -9,6 +9,7 @@ length_x = 12;%要截取的部分的patch的高
 start_tans_y = 9;%要截取的部分的patch开始的y
 length_y = 12;%要截取的部分的patch的宽
 index2 = [2:6 8:42 44:48]';%要使用的部分
+%index2 = [2:19 21:379 381:399]';%要使用的部分
 
 w = zeros(size(a,1)*size(a,2)*scalesize*scalesize, size(a,1)*size(a,2));
 for i=1:size(a,1)
@@ -23,7 +24,7 @@ for i=1:size(a,1)
         w(index,k) = b(index);
     end
 end
-im = im2double(imread('Barbara.png'));
+im = im2double(imread('Barbara.bmp'));
 %im = imread('Barbara.png');
 startx = 11;
 starty = 1;
@@ -53,14 +54,11 @@ figure;
 imshow(zz);
 
 www = [ww zeros(size(ww,1),1)]; %因为x最后加了一个1，那么ww最后加个0.
+zzz = reshape([xx(index2);1]'*www',length_x,length_y);
+figure;
+imshow(zzz);
 www = www';
-save('w0.mat','www');
+save('w1.mat','www');
 
 data = load('w0.mat');
 wwww = data.www;
-
-
-
-
-
-

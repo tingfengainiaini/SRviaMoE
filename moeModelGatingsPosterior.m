@@ -16,6 +16,7 @@ else
         end
     end
 end
+GatingsPosterior(isnan(GatingsPosterior)) = eps;
 SumGatingsPosterior = sum(GatingsPosterior,2) ;
 GatingsPosterior = GatingsPosterior./repmat(SumGatingsPosterior,1,size(GatingsPosterior,2)) ;
 for i = 1:moeModel.NumExperts

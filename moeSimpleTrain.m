@@ -1,11 +1,10 @@
 function moeModel = moeSimpleTrain(moeModel, Target, idx_label)
 
 %% Train moeModel
- MinPosterior = 0.001;
  MinErrorCompete = inf; 
  MinErrorCoorper = inf;
  MinErrorLoc = 1;
-ifbreak = 0;
+ ifbreak = 0;
 
 count = 1;
 while (count <= moeModel.MaxIt)
@@ -32,7 +31,7 @@ while (count <= moeModel.MaxIt)
                 end
             end
             %这里使用小技巧，gateoutput的分子分母同时除以一个最小值，这样不影响最终结果，但是防止了0/0的情况
-            min_sum = min(sum_squre_distance,[],2)/2;
+            min_sum = min(sum_squre_distance,[],2);
             gatingsOutputs = exp(-moeModel.Gatings.Beta*(sum_squre_distance-repmat(min_sum,1,moeModel.NumExperts)));
             moeModel.Gatings.Outputs  =  gatingsOutputs;
             %这里需不需要每一步都scale一下啊？
@@ -69,7 +68,7 @@ while (count <= moeModel.MaxIt)
         end
     end
     
-    moeModel.LogLike(count,1) = moeLogLike(Target, moeModel);
+    moeModel.LogLike(count,1) = moeLogLike(Target, moeModel, count);
     
     if (sum(sum(isnan(moeModel.LogLike(count))))>0) 
             fprintf('%d iterate: %d isnan(moeModel.LogLike), result in moeModel reduce\n', idx_label,count);

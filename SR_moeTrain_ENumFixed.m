@@ -8,21 +8,28 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
     end
     
     folder_mappingdata_wang = fullfile(folder_wang,sprintf('MappingData_%d_full_%d',kmeans_Num, dataNum));
-    folder_moe_result_wang = fullfile(folder_wang,sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_WithReduce_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num, ExpertNum, Gbeta,lamda,EUseTol,EUseW_0,GUseMetric,dataNum));
+    folder_moe_result_wang = fullfile(folder_wang,sprintf('moe_result_ENFixed_k%d_e%d_beta%d_lamda%g_%s_regular_usetol%d_usew%d_usem%d_%d',kmeans_Num, ExpertNum, Gbeta,lamda,ERelation, EUseTol,EUseW_0,GUseMetric,dataNum));
     
+    if ~exist(folder_moe_result_wang,'dir')
+            mkdir(folder_moe_result_wang);
+    end
+        
     idx_label_start = 1;
     idx_label_end = kmeans_Num;%Parameter
-    cut_value = 100000;%set the value to be cutted 设置需要裁剪规模的阈值。可以稍微改的大一些。
+    cut_value = 1000000;%set the value to be cutted 设置需要裁剪规模的阈值。可以稍微改的大一些。
     
     
     warning('off','MATLAB:rankDeficientMatrix');
     % fbme_arr = cell(num_files,1);
     badMoENum = 1;
-    while badMoENum > 0
+    iter_total = 1;
+    LearningRateTemp = LearningRate;
+    while badMoENum > 0 && iter_total < 10
         %----------------------------------while iterate---------------------------------------------------------------
         badMoENum = 0;
         badmoeIndex = [];
         for idx_label = idx_label_start:idx_label_end%根据聚类的标签遍历处理
+            LearningRate = LearningRateTemp;
         %for idx_label  = [1212 1546 4001]%根据聚类的标签遍历处理
             fn_moe = sprintf('moeRresult_%d.mat',idx_label);
             fn_full = fullfile(folder_moe_result_wang,fn_moe);
@@ -36,6 +43,7 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
                     fprintf('%d moe is bad, loglike - inf--------total %d', idx_label, badMoENum);
                     badMoENum =badMoENum+1;
                     badmoeIndex = [badmoeIndex idx_label]
+                    LearningRate = LearningRate*power(0.2,iter_total);
                     continue;
                 else
                     if isfield(moeTest.Experts, 'Weights')
@@ -45,6 +53,7 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
                         fprintf('%d moe is bad,no weights--------total %d', idx_label, badMoENum);
                         badMoENum =badMoENum+1;
                         badmoeIndex = [badmoeIndex idx_label]
+                        LearningRate = LearningRate*power(0.2,iter_total);
                     end
                 end
                 clear loadDataTest;
@@ -99,5 +108,6 @@ function SR_moeTrain_ENumFixed(kmeans_Num,Gbeta, maxIt, ExpertNum, LearningRate,
         fprintf('The bad moe num is %d\n',badMoENum);
         disp(badmoeIndex);
      %------------------------------------end while iterate------------------------------------------------------------
-    end
+     iter_total = iter_total+1;
+    end %end while 
 end

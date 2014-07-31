@@ -1,6 +1,6 @@
 function Variances = moeExpertsVariances(Target, moeModel)
 %% Compute the variance of expert
-N = length(Target);
+N = size(Target,1);
 Num = moeModel.NumExperts;
 Threshold = 0.1/Num;
 
